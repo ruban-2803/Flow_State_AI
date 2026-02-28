@@ -1,0 +1,51 @@
+# render.yaml — One-click deploy to Render.com
+# Push this file to your GitHub repo root, then import the repo on render.com
+
+services:
+  # ── FastAPI backend ──────────────────────────────────────────────────────────
+  - type: web
+    name: cubers-ai-coach-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: python main.py
+    plan: starter          # upgrade to "standard" for better CPU on long videos
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: UPLOAD_DIR
+        value: /tmp/cubers_uploads
+      - key: MAX_UPLOAD_MB
+        value: 200
+      - key: INTENSITY_THRESHOLD
+        value: "2.0"
+      - key: MIN_PAUSE_DURATION
+        value: "0.5"
+
+  # ── Streamlit frontend ───────────────────────────────────────────────────────
+  - type: web
+    name: cubers-ai-coach-ui
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: >
+      streamlit run app.py
+      --server.port $PORT
+      --server.address 0.0.0.0
+      --server.headless true
+      --server.maxUploadSize 200
+      --browser.gatherUsageStats false
+      --theme.base dark
+      --theme.primaryColor "#818cf8"
+      --theme.backgroundColor "#0d0d1a"
+      --theme.secondaryBackgroundColor "#111827"
+      --theme.textColor "#e5e7eb"
+    plan: starter
+    envVars:
+      - key: API_URL
+        fromService:
+          name: cubers-ai-coach-api
+          type: web
+          property: host
+          # Will be auto-formatted as https://cubers-ai-coach-api.onrender.com
+      - key: MAX_UPLOAD_MB
+        value: 200
